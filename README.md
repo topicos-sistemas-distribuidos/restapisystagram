@@ -67,14 +67,14 @@ Sobre as operações para execução da aplicação
 
 1. Faça o clone do repositório.
 
-2. Crie o banco demo.
+2. Crie o banco dbsystagram.
 ```
-mysql> create database demo
+mysql> create database dbsystagram
 ```
 
-3. Rode o script restaura-banco.sql para criar as tabelas com os dados de exemplo.
+3. Rode o script restaura-dbsystagram.sql para criar as tabelas com os dados de exemplo.
 ```
-mysql> source scripts/sql/restaura-banco.sql
+mysql> source scripts/sql/restaura-dbsystagram.sql
 ```
 
 4. Limpe o projeto via comando clean do maven.

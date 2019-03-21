@@ -2,7 +2,11 @@ package br.ufc.great.es.api.demo.model;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 public class Picture extends AbstractModel<Long>{
@@ -11,9 +15,12 @@ public class Picture extends AbstractModel<Long>{
 	private String path;
 	private String systemName;
 	
-	@OneToOne
+	@JsonBackReference(value="picture-person")
+	@OneToOne(fetch = FetchType.LAZY)
 	private Person person;
-	@OneToOne(cascade=CascadeType.ALL)
+	
+	@JsonBackReference(value="picture-post")
+	@OneToOne(fetch = FetchType.LAZY, cascade=CascadeType.ALL)
 	private Post post;
 	
 	public Picture() {

@@ -15,6 +15,8 @@ import org.hibernate.annotations.Type;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 /**
  * Classe modelo de Usuário
  * @author armandosoaressousa
@@ -34,6 +36,7 @@ public class Users extends AbstractModel<Long> implements UserDetails{
 	private String email;		
 	@ManyToMany(fetch = FetchType.EAGER)
 	private List<Role> roles = new LinkedList<Role>();
+	@JsonBackReference(value="user-person")
 	@OneToOne(cascade=CascadeType.ALL)
 	private Person person;
 	

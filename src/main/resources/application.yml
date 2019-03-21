@@ -15,7 +15,7 @@ spring:
     name: demo
   datasource:
     driver-class-name: com.mysql.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/demo
+    url: jdbc:mysql://localhost:3306/dbsystagram
     username: root
     password: skyinfo
   jpa:

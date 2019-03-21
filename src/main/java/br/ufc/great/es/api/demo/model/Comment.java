@@ -2,8 +2,13 @@ package br.ufc.great.es.api.demo.model;
 
 import java.util.Date;
 
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
+import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 public class Comment extends AbstractModel<Long>{
@@ -11,7 +16,8 @@ public class Comment extends AbstractModel<Long>{
 	private String description;
 	private Date date;
 
-	@OneToOne
+	@JsonBackReference(value="comment-person")
+	@OneToOne(fetch = FetchType.LAZY)
 	private Person person;
 	
 	public Comment() {

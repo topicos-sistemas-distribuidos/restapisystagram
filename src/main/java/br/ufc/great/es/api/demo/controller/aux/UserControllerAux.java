@@ -30,8 +30,7 @@ import br.ufc.great.es.api.demo.utils.MyRequestInfo;
  * @author armandosoaressousa
  *
  */
-@Controller
-public class UserController {
+public class UserControllerAux {
 	private UsersService userService;
 	private Users loginUser;
 	private AuthoritiesService authoritiesService;

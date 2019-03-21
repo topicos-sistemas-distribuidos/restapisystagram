@@ -6,8 +6,11 @@ import java.util.List;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 public class Post extends AbstractModel<Long>{
@@ -15,11 +18,13 @@ public class Post extends AbstractModel<Long>{
 	private Date date;
 	private int likes=0;
 
-	@OneToOne
+	@OneToOne(fetch = FetchType.LAZY)
 	private Person person;
-	@OneToOne
+	
+	@OneToOne(fetch = FetchType.LAZY)
 	private Picture picture;
-	@OneToMany(cascade=CascadeType.ALL)
+	
+	@OneToMany(fetch = FetchType.LAZY, cascade=CascadeType.ALL)
 	private List<Comment> comments = new LinkedList<>();
 	
 	public Post() {

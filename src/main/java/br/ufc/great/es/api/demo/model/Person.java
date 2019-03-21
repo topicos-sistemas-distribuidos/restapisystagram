@@ -6,13 +6,17 @@ import java.util.List;
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
+
+import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 public class Person extends AbstractModel<Long>{
 	private static final long serialVersionUID = 1L;
-	@OneToOne
+	@JsonBackReference(value="user-person")
+	@OneToOne(fetch = FetchType.LAZY)
 	private Users user;
 	@Column(length=255)
 	private String name;
@@ -27,11 +31,16 @@ public class Person extends AbstractModel<Long>{
 	private double latitude=0;
 	private double longitude=0;
 
-	@OneToMany(cascade=CascadeType.ALL)
+	@JsonBackReference(value="person-comment")
+	@OneToMany(fetch = FetchType.LAZY, cascade=CascadeType.ALL)
 	private List<Comment> comments = new LinkedList<>();
-	@OneToMany(cascade=CascadeType.ALL)
+	
+	@JsonBackReference(value="person-picture")
+	@OneToMany(fetch = FetchType.LAZY, cascade=CascadeType.ALL)
 	private List<Picture> pictures = new LinkedList<>();
-	@OneToMany(cascade=CascadeType.ALL)
+	
+	@JsonBackReference(value="person-post")
+	@OneToMany(fetch = FetchType.LAZY, cascade=CascadeType.ALL)
 	private List<Post> posts = new LinkedList<>();
 
 	public Person() {
