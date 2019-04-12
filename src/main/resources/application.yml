@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: 80
   undertow: 
     ioThreads: 15
     workerThreads: 150
@@ -15,7 +15,7 @@ spring:
     name: demo
   datasource:
     driver-class-name: com.mysql.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/dbsystagram
+    url: jdbc:mysql://35.247.238.162:3306/dbsystagram
     username: root
     password: skyinfo
   jpa:

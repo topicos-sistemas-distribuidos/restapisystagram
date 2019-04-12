@@ -1,14 +1,19 @@
 package br.ufc.great.es.api.demo.controller;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.channels.FileChannel;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,8 +30,8 @@ import br.ufc.great.es.api.demo.service.PersonService;
 import br.ufc.great.es.api.demo.service.PictureService;
 import br.ufc.great.es.api.demo.service.UsersService;
 import br.ufc.great.es.api.demo.utils.Constantes;
+import br.ufc.great.es.api.demo.utils.FileSaver;
 import br.ufc.great.es.api.demo.utils.ManipuladorDatas;
-import br.ufc.great.es.api.demo.utils.MyRequestInfo;
 
 @Controller
 public class FileUploadController {
@@ -36,9 +41,6 @@ public class FileUploadController {
 	private PersonService personService;
 	private PictureService pictureService;
 	
-	@Autowired
-	private MyRequestInfo mySessionInfo;
-
 	@Autowired
 	public void setUserService(UsersService userServices){
 		this.userService = userServices;
@@ -53,9 +55,11 @@ public class FileUploadController {
 	public void setPictureService(PictureService pictureService) {
 		this.pictureService = pictureService;
 	}
+	
+	@Autowired
+	private FileSaver fileSaver;
 
 	private void checkUser() {
-		loginUser = mySessionInfo.getCurrentUser();
 	}
 
 	@RequestMapping("/uploads")
@@ -70,7 +74,7 @@ public class FileUploadController {
 	 * @return listMypictures
 	 */
 	@RequestMapping("/upload/person/{id}/picture")
-	public String listMyPictures(@PathVariable Long id, final RedirectAttributes ra) {
+	public String listMyPictures(@PathVariable Long id, Model model, final RedirectAttributes ra) {
 		Person person = this.personService.get(id);
 		
 		if (person.getPictures().size() == 0) {
@@ -82,8 +86,17 @@ public class FileUploadController {
 		List<Picture> list = person.getPictures();
 		
 		checkUser();
-		
-		return "/uploads/listMypictures";
+		/*
+		model.addAttribute("user", person.getUser());
+		model.addAttribute("person", person);
+		model.addAttribute("list", list);
+		model.addAttribute("loginusername", loginUser.getUsername());
+		model.addAttribute("loginemailuser", loginUser.getEmail());
+		model.addAttribute("loginuserid", loginUser.getId());
+		model.addAttribute("loginuser", loginUser);
+		model.addAttribute("s3awsurl", new Constantes().s3awsurl);
+		*/
+		return "/uploads/listMyPictures";
 	}
 	
 	/**
@@ -112,31 +125,86 @@ public class FileUploadController {
 	}
 
 	/**
-	 * Faz o upload de uma imagem do usuário
+	 * Converte um MultipartFile em File
+	 * @param file
+	 * @return
+	 */
+	public File convert(MultipartFile file)
+	{    
+	    File convFile = null;
+		try {
+			convFile = new File(file.getOriginalFilename());
+			convFile.createNewFile(); 
+			FileOutputStream fos = new FileOutputStream(convFile); 
+			fos.write(file.getBytes());
+			fos.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} 
+	    
+	    return convFile;
+	}
+	
+	/**
+	 * Faz o upload de uma imagem do usuário para o bucket de usuario
 	 * @param idUser Id do Usuário
 	 * @param model Model
 	 * @param files Array de Arquivos
 	 * @return Formulário do Usuário
 	 */
 	@RequestMapping("/upload/selected/image/users/{idUser}")
-	public String upload(@PathVariable(value = "idUser") Long idUser, @RequestParam("photouser") MultipartFile[] files) {
-		StringBuilder fileNames = new StringBuilder();
-		new Constantes();
-		String uploadFilePath = Constantes.uploadUserDirectory; 	  
-		String idAux = String.valueOf(idUser);
-
-		for (MultipartFile file : files) {
-			Path fileNameAndPath = Paths.get(uploadFilePath, idAux+".png");
-			fileNames.append(idAux+".png"+" ");
-			try {
-				Files.write(fileNameAndPath, file.getBytes());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+	public String upload(@PathVariable(value = "idUser") Long idUser, Model model,@RequestParam("photouser") MultipartFile files) {
+		new Constantes(); 	  
+		String idAux = String.valueOf(idUser);		
+		String bucketName = Constantes.bucketPrincipal;
+		
+		File myFile = convert(files);
+		File newFile = new File(idAux+".png");			
+		
+		//Transforma uma imagem qualquer em png para padronizar as imagens do sistema
+		try {
+			FileChannel src = new FileInputStream(myFile).getChannel();
+			FileChannel dest = new FileOutputStream(newFile).getChannel();
+			dest.transferFrom(src, 0, src.size());
+			System.out.println("Arquivo transformado em .png com sucesso!");
+		} catch (FileNotFoundException e) {
+			System.out.println("Arquivo nao existe!");
+			e.printStackTrace();
+		} catch (IOException e) {
+			System.out.println("Erro ao transformar arquivo em .png.");
+			e.printStackTrace();
+		}
+		
+		MultipartFile multipartFileToSend=null;
+		try {
+			InputStream stream =  new FileInputStream(newFile);
+			multipartFileToSend = new MockMultipartFile(idAux+".png", newFile.getName(), MediaType.IMAGE_PNG_VALUE, stream);
+			System.out.println("Multipart transformado em arquivo com sucesso!");
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			System.out.println("ERRO: no Multipart transformado em arquivo.");
+			e.printStackTrace();
+		}	    
+		
+		if (!files.isEmpty()){
+			String path = fileSaver.write(multipartFileToSend, "users");				
 		}
 
 		checkUser();
 		Users user = this.userService.get(idUser);
+
+		/*
+		model.addAttribute("user", user);
+		model.addAttribute("loginusername", loginUser.getUsername());
+		model.addAttribute("loginemailuser", loginUser.getEmail());
+		model.addAttribute("loginuserid", loginUser.getId());
+		model.addAttribute("loginuser", loginUser);
+		model.addAttribute("successFlash", "Successfully uploaded files " + newFile.getName());
+		model.addAttribute("s3awsurl", new Constantes().s3awsurl);
+		*/
 
 		return "uploads/formpwd";
 	}
@@ -149,9 +217,7 @@ public class FileUploadController {
 	 * @return carrega listMyPictures.html
 	 */
 	@RequestMapping(value="/upload/selected/picture/person/{personId}")
-	public String uploadPicture(@PathVariable(value = "personId") Long personId, Picture picture, @RequestParam("photouser") MultipartFile[] files, RedirectAttributes ra) {
-		StringBuilder fileNames = new StringBuilder();
-
+	public String uploadPicture(@PathVariable(value = "personId") Long personId, Picture picture, Model model,@RequestParam("photouser") MultipartFile files, RedirectAttributes ra) {
 		new Constantes();
 		String uploadFilePath = Constantes.picturesDirectory; 	  
 		String idAux = String.valueOf(personId);
@@ -164,27 +230,48 @@ public class FileUploadController {
 		String data = data1.replace(" ", "-");
 		
 		//Define o diretório da imagem e o nome do arquivo que será salvo no filesystem
-		String path = uploadFilePath + FileSystems.getDefault().getSeparator() + idAux + "-" + data + ".png";
+		String pathImage = uploadFilePath + FileSystems.getDefault().getSeparator() + idAux + "-" + data + ".png";
 		String systemName = idAux + "-" + data;
 		
-    	picture.setPath(path);
+    	picture.setPath(pathImage); //TODO: precisa corrigir para pegar a url da image no bucket
     	picture.setSystemName(systemName);
     	
     	//Dono da imagem
     	Person person = this.personService.get(personId);
-    	person.addPicture(picture, person);
-    	    	
-    	Person save = this.personService.save(person);
+    	person.addPicture(picture, person);    	    	
+    	Person save = this.personService.save(person);				
 		
-    	//Salva os bytes do arquivo no arquivo criado no filesystem
-		for (MultipartFile file : files) {
-			Path fileNameAndPath = Paths.get(uploadFilePath, idAux + "-" + data + ".png");
-			fileNames.append(idAux + "-" + data + ".png"+" ");
-			try {
-				Files.write(fileNameAndPath, file.getBytes());
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+		File myFile = convert(files);
+		File newFile = new File(systemName +".png");			
+		
+		//Transforma uma imagem qualquer em png para padronizar as imagens do sistema
+		try {
+			FileChannel src = new FileInputStream(myFile).getChannel();
+			FileChannel dest = new FileOutputStream(newFile).getChannel();
+			dest.transferFrom(src, 0, src.size());
+			System.out.println("Arquivo transformado em .png com sucesso!");
+		} catch (FileNotFoundException e) {
+			System.out.println("Arquivo nao existe!");
+			e.printStackTrace();
+		} catch (IOException e) {
+			System.out.println("Erro ao transformar arquivo em .png.");
+			e.printStackTrace();
+		}
+		
+		MultipartFile multipartFileToSend=null;
+		try {
+			InputStream stream =  new FileInputStream(newFile);
+			multipartFileToSend = new MockMultipartFile(systemName + ".png", newFile.getName(), MediaType.IMAGE_PNG_VALUE, stream);
+			System.out.println("Multipart transformado em arquivo com sucesso!");
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			System.out.println("ERRO: no Multipart transformado em arquivo.");
+			e.printStackTrace();
+		}	    
+		
+		if (!files.isEmpty()){
+			String path = fileSaver.write(multipartFileToSend, "pictures");				
 		}
 
 		checkUser();
@@ -192,7 +279,19 @@ public class FileUploadController {
 		//List de fotos da pessoa
 		List<Picture> list = person.getPictures();
 
-		return "/uploads/listMypictures";
+		/*
+		model.addAttribute("user", person.getUser());
+		model.addAttribute("person", person);
+		model.addAttribute("list", list);
+		model.addAttribute("loginusername", loginUser.getUsername());
+		model.addAttribute("loginemailuser", loginUser.getEmail());
+		model.addAttribute("loginuserid", loginUser.getId());
+		model.addAttribute("loginuser", loginUser);
+		model.addAttribute("successFlash", "Successfully uploaded files " + newFile.getName());
+		model.addAttribute("s3awsurl", new Constantes().s3awsurl);
+		*/
+	
+		return "/uploads/listMyPictures";
 	}
 
 	/**
